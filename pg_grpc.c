@@ -44,7 +44,9 @@
 
 PG_MODULE_MAGIC;
 
+static grpc_call *call = NULL;
 static grpc_channel *channel = NULL;
+static grpc_slice host;
 
 void _PG_init(void); void _PG_init(void) {
     grpc_init();
@@ -52,6 +54,9 @@ void _PG_init(void); void _PG_init(void) {
 }
 
 void _PG_fini(void); void _PG_fini(void) {
+    void* reserved = NULL;
+    grpc_call_error error;
+    if (call && (error = grpc_call_cancel(call, reserved))) E("!grpc_call_cancel and %s", grpc_call_error_to_string(error));
     if (channel) grpc_channel_destroy(channel);
     grpc_shutdown();
 }
@@ -77,6 +82,20 @@ EXTENSION(pg_grpc_secure_channel_create) {
     target = TextDatumGetCString(PG_GETARG_DATUM(0));
     if (channel) grpc_channel_destroy(channel);
     if (!(channel = grpc_secure_channel_create(creds, target, args, reserved))) E("!grpc_insecure_channel_create");
+    host = grpc_slice_from_copied_string(target);
     pfree((void *)target);
+    PG_RETURN_BOOL(true);
+}
+
+EXTENSION(pg_grpc_channel_create_call) {
+    grpc_call *parent_call = NULL;
+    uint32_t propagation_mask = 0;
+    grpc_completion_queue *completion_queue = NULL;
+    grpc_slice method;
+    gpr_timespec deadline;
+    void* reserved = NULL;
+    grpc_call_error error;
+    if (call && (error = grpc_call_cancel(call, reserved))) E("!grpc_call_cancel and %s", grpc_call_error_to_string(error));
+    if (!(call = grpc_channel_create_call(channel, parent_call, propagation_mask, completion_queue, method, &host, deadline, reserved))) E("!grpc_channel_create_call");
     PG_RETURN_BOOL(true);
 }
