@@ -1,4 +1,5 @@
 #include <grpc/grpc.h>
+#include <grpc/grpc_security.h>
 #include <postgres.h>
 
 //#include <catalog/pg_type.h>
@@ -46,16 +47,30 @@
 
 PG_MODULE_MAGIC;
 
+static grpc_channel *channel;
+
 void _PG_init(void); void _PG_init(void) {
     grpc_init();
+    if (!grpc_is_initialized()) E("!grpc_is_initialized");
 }
 
 void _PG_fini(void); void _PG_fini(void) {
     grpc_shutdown();
 }
 
-EXTENSION(pg_grpc) {
-    if (!grpc_is_initialized()) E("!grpc_is_initialized");
-//    grpc_insecure_channel_create
+EXTENSION(pg_grpc_insecure_channel_create) {
+    const grpc_channel_args *args = NULL;
+    void *reserved = NULL;
+    const char *target = "";
+    channel = grpc_insecure_channel_create(target, args, reserved);
+    PG_RETURN_BOOL(true);
+}
+
+EXTENSION(pg_grpc_secure_channel_create) {
+    grpc_channel_credentials *creds = NULL;
+    const grpc_channel_args *args = NULL;
+    void *reserved = NULL;
+    const char *target = "";
+    channel = grpc_secure_channel_create(creds, target, args, reserved);
     PG_RETURN_BOOL(true);
 }
