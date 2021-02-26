@@ -96,7 +96,7 @@ EXTENSION(pg_grpc_channel_create_call) {
     uint32_t propagation_mask = 0;
     grpc_slice method;
     grpc_slice host = grpc_slice_from_copied_string(target);
-    gpr_timespec deadline;
+    gpr_timespec deadline = gpr_inf_future(GPR_CLOCK_MONOTONIC);
     void* reserved = NULL;
     grpc_call_error error;
     const char *cmethod;
