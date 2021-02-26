@@ -118,10 +118,15 @@ EXTENSION(pg_grpc_call_start_batch) {
     size_t nops = 1;
     void *tag = NULL;
     void *reserved = NULL;
+    grpc_metadata_array metadata;
     grpc_call_error error;
     if (!call) E("!call");
+    grpc_metadata_array_init(&metadata);
     memset(&ops, 0, sizeof(ops));
-    ops.op = GRPC_OP_RECV_MESSAGE;
+    ops.op = GRPC_OP_SEND_INITIAL_METADATA;
+    ops.data.send_initial_metadata.metadata = metadata.metadata;
+    ops.data.send_initial_metadata.count = metadata.count;
     if ((error = grpc_call_start_batch(call, &ops, nops, tag, reserved))) E("!grpc_call_start_batch and %s", grpc_call_error_to_string(error));
+    grpc_metadata_array_destroy(&metadata);
     PG_RETURN_BOOL(true);
 }
