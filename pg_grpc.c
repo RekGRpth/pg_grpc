@@ -58,9 +58,12 @@ void _PG_fini(void); void _PG_fini(void) {
 EXTENSION(pg_grpc_insecure_channel_create) {
     const grpc_channel_args *args = NULL;
     void *reserved = NULL;
-    const char *target = "";
+    const char *target;
+    if (PG_ARGISNULL(0)) E("target is null!");
+    target = TextDatumGetCString(PG_GETARG_DATUM(0));
     if (channel) grpc_channel_destroy(channel);
     if (!(channel = grpc_insecure_channel_create(target, args, reserved))) E("!grpc_insecure_channel_create");
+    pfree((void *)target);
     PG_RETURN_BOOL(true);
 }
 
@@ -68,8 +71,11 @@ EXTENSION(pg_grpc_secure_channel_create) {
     grpc_channel_credentials *creds = NULL;
     const grpc_channel_args *args = NULL;
     void *reserved = NULL;
-    const char *target = "";
+    const char *target;
+    if (PG_ARGISNULL(0)) E("target is null!");
+    target = TextDatumGetCString(PG_GETARG_DATUM(0));
     if (channel) grpc_channel_destroy(channel);
     if (!(channel = grpc_secure_channel_create(creds, target, args, reserved))) E("!grpc_insecure_channel_create");
+    pfree((void *)target);
     PG_RETURN_BOOL(true);
 }
