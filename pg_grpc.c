@@ -152,7 +152,8 @@ EXTENSION(pg_grpc_completion_queue_next) {
     gpr_timespec deadline = gpr_inf_future(GPR_CLOCK_MONOTONIC);
     void *reserved = NULL;
     if (!completion_queue) E("!completion_queue");
-    for (;;) {
+    pg_grpc_interrupt_requested = 0;
+    while (!pg_grpc_interrupt_requested) {
         grpc_event event = grpc_completion_queue_next(completion_queue, deadline, reserved);
         if (event.type == GRPC_OP_COMPLETE) {
             W("GRPC_OP_COMPLETE");
