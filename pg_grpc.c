@@ -45,28 +45,20 @@
 
 PG_MODULE_MAGIC;
 
-/*struct grpc_c_event_s {
-    grpc_c_event_type_t type;
-    void *data;
-    grpc_c_event_callback_t callback;
-};*/
-
 static char *target = NULL;
 static grpc_call *call = NULL;
 static grpc_channel *channel = NULL;
 static grpc_completion_queue *completion_queue = NULL;
-static int pg_grpc_interrupt_requested = 0;
 static pqsigfunc pgsql_interrupt_handler = NULL;
 
 static void pg_grpc_interrupt_handler(int sig) {
     W("sig = %i", sig);
-    pg_grpc_interrupt_requested = sig;
+    grpc_completion_queue_shutdown(completion_queue);
 }
 
 void _PG_init(void); void _PG_init(void) {
     grpc_init();
     if (!grpc_is_initialized()) E("!grpc_is_initialized");
-    pg_grpc_interrupt_requested = 0;
     pgsql_interrupt_handler = pqsignal(SIGINT, pg_grpc_interrupt_handler);
 }
 
@@ -152,8 +144,7 @@ EXTENSION(pg_grpc_completion_queue_next) {
     gpr_timespec deadline = gpr_inf_future(GPR_CLOCK_MONOTONIC);
     void *reserved = NULL;
     if (!completion_queue) E("!completion_queue");
-    pg_grpc_interrupt_requested = 0;
-    while (!pg_grpc_interrupt_requested) {
+    for (;;) {
         grpc_event event = grpc_completion_queue_next(completion_queue, deadline, reserved);
         if (event.type == GRPC_OP_COMPLETE) {
             W("GRPC_OP_COMPLETE");
