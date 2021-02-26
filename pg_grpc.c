@@ -53,7 +53,7 @@ static pqsigfunc pgsql_interrupt_handler = NULL;
 
 static void pg_grpc_interrupt_handler(int sig) {
     W("sig = %i", sig);
-    grpc_completion_queue_shutdown(completion_queue);
+    if (completion_queue) grpc_completion_queue_destroy(completion_queue);
 }
 
 void _PG_init(void); void _PG_init(void) {
@@ -67,7 +67,7 @@ void _PG_fini(void); void _PG_fini(void) {
     grpc_call_error error;
     pqsignal(SIGINT, pgsql_interrupt_handler);
     if (target) pfree((void *)target);
-    grpc_completion_queue_destroy(completion_queue);
+    if (completion_queue) grpc_completion_queue_destroy(completion_queue);
     if (call && (error = grpc_call_cancel(call, reserved))) E("!grpc_call_cancel and %s", grpc_call_error_to_string(error));
     if (channel) grpc_channel_destroy(channel);
     grpc_shutdown();
