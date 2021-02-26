@@ -95,7 +95,7 @@ EXTENSION(pg_grpc_channel_create_call) {
     grpc_call *parent_call = NULL;
     uint32_t propagation_mask = 0;
     grpc_slice method;
-    grpc_slice host = grpc_slice_from_copied_string(target);
+    grpc_slice host;
     gpr_timespec deadline = gpr_inf_future(GPR_CLOCK_MONOTONIC);
     void *reserved = NULL;
     grpc_call_error error;
@@ -104,6 +104,7 @@ EXTENSION(pg_grpc_channel_create_call) {
     if (PG_ARGISNULL(0)) E("method is null!");
     cmethod = TextDatumGetCString(PG_GETARG_DATUM(0));
     method = grpc_slice_from_copied_string(cmethod);
+    host = grpc_slice_from_copied_string(target);
     if (call && (error = grpc_call_cancel(call, reserved))) E("!grpc_call_cancel and %s", grpc_call_error_to_string(error));
     if (!(call = grpc_channel_create_call(channel, parent_call, propagation_mask, completion_queue, method, &host, deadline, reserved))) E("!grpc_channel_create_call");
     pfree((void *)cmethod);
