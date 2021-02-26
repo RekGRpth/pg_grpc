@@ -55,7 +55,7 @@ void _PG_init(void); void _PG_init(void) {
 }
 
 void _PG_fini(void); void _PG_fini(void) {
-    void* reserved = NULL;
+    void *reserved = NULL;
     grpc_call_error error;
     if (target) pfree((void *)target);
     grpc_completion_queue_destroy(completion_queue);
@@ -97,9 +97,10 @@ EXTENSION(pg_grpc_channel_create_call) {
     grpc_slice method;
     grpc_slice host = grpc_slice_from_copied_string(target);
     gpr_timespec deadline = gpr_inf_future(GPR_CLOCK_MONOTONIC);
-    void* reserved = NULL;
+    void *reserved = NULL;
     grpc_call_error error;
     const char *cmethod;
+    if (!channel) E("!channel");
     if (PG_ARGISNULL(0)) E("method is null!");
     cmethod = TextDatumGetCString(PG_GETARG_DATUM(0));
     method = grpc_slice_from_copied_string(cmethod);
@@ -108,5 +109,18 @@ EXTENSION(pg_grpc_channel_create_call) {
     pfree((void *)cmethod);
     grpc_slice_unref(method);
     grpc_slice_unref(host);
+    PG_RETURN_BOOL(true);
+}
+
+EXTENSION(pg_grpc_call_start_batch) {
+    grpc_op ops;
+    size_t nops = 1;
+    void *tag = NULL;
+    void *reserved = NULL;
+    grpc_call_error error;
+    if (!call) E("!call");
+    memset(&ops, 0, sizeof(ops));
+    ops.op = GRPC_OP_RECV_MESSAGE;
+    if (!(error = grpc_call_start_batch(call, &ops, nops, tag, reserved))) E("!grpc_call_start_batch and %s", grpc_call_error_to_string(error));
     PG_RETURN_BOOL(true);
 }
