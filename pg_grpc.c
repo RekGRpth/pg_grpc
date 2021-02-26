@@ -44,6 +44,12 @@
 
 PG_MODULE_MAGIC;
 
+/*struct grpc_c_event_s {
+    grpc_c_event_type_t type;
+    void *data;
+    grpc_c_event_callback_t callback;
+};*/
+
 static char *target = NULL;
 static grpc_call *call = NULL;
 static grpc_channel *channel = NULL;
@@ -128,5 +134,21 @@ EXTENSION(pg_grpc_call_start_batch) {
     ops.data.send_initial_metadata.count = metadata.count;
     if ((error = grpc_call_start_batch(call, &ops, nops, tag, reserved))) E("!grpc_call_start_batch and %s", grpc_call_error_to_string(error));
     grpc_metadata_array_destroy(&metadata);
+    PG_RETURN_BOOL(true);
+}
+
+EXTENSION(pg_grpc_completion_queue_next) {
+    gpr_timespec deadline = gpr_inf_future(GPR_CLOCK_MONOTONIC);
+    void *reserved = NULL;
+    if (!completion_queue) E("!completion_queue");
+    for (;;) {
+        grpc_event event = grpc_completion_queue_next(completion_queue, deadline, reserved);
+        if (event.type == GRPC_OP_COMPLETE) {
+            W("GRPC_OP_COMPLETE");
+        } else if (event.type == GRPC_QUEUE_SHUTDOWN) {
+            W("GRPC_QUEUE_SHUTDOWN");
+            break;
+        }
+    }
     PG_RETURN_BOOL(true);
 }
