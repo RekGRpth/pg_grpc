@@ -122,6 +122,6 @@ EXTENSION(pg_grpc_call_start_batch) {
     if (!call) E("!call");
     memset(&ops, 0, sizeof(ops));
     ops.op = GRPC_OP_RECV_MESSAGE;
-    if (!(error = grpc_call_start_batch(call, &ops, nops, tag, reserved))) E("!grpc_call_start_batch and %s", grpc_call_error_to_string(error));
+    if ((error = grpc_call_start_batch(call, &ops, nops, tag, reserved))) E("!grpc_call_start_batch and %s", grpc_call_error_to_string(error));
     PG_RETURN_BOOL(true);
 }
