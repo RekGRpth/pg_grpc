@@ -44,7 +44,7 @@
 
 PG_MODULE_MAGIC;
 
-static grpc_channel *channel;
+static grpc_channel *channel = NULL;
 
 void _PG_init(void); void _PG_init(void) {
     grpc_init();
@@ -59,7 +59,8 @@ EXTENSION(pg_grpc_insecure_channel_create) {
     const grpc_channel_args *args = NULL;
     void *reserved = NULL;
     const char *target = "";
-    channel = grpc_insecure_channel_create(target, args, reserved);
+    if (channel) grpc_channel_destroy(channel);
+    if (!(channel = grpc_insecure_channel_create(target, args, reserved))) E("!grpc_insecure_channel_create");
     PG_RETURN_BOOL(true);
 }
 
@@ -68,6 +69,7 @@ EXTENSION(pg_grpc_secure_channel_create) {
     const grpc_channel_args *args = NULL;
     void *reserved = NULL;
     const char *target = "";
-    channel = grpc_secure_channel_create(creds, target, args, reserved);
+    if (channel) grpc_channel_destroy(channel);
+    if (!(channel = grpc_secure_channel_create(creds, target, args, reserved))) E("!grpc_insecure_channel_create");
     PG_RETURN_BOOL(true);
 }
