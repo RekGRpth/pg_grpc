@@ -3,6 +3,7 @@
 #include <catalog/pg_type.h>
 #include <fmgr.h>
 #include <lib/stringinfo.h>
+#include <signal.h>
 #include <utils/builtins.h>
 
 #include <grpc/grpc.h>
@@ -54,15 +55,25 @@ static char *target = NULL;
 static grpc_call *call = NULL;
 static grpc_channel *channel = NULL;
 static grpc_completion_queue *completion_queue = NULL;
+static int pg_grpc_interrupt_requested = 0;
+static pqsigfunc pgsql_interrupt_handler = NULL;
+
+static void pg_grpc_interrupt_handler(int sig) {
+    W("sig = %i", sig);
+    pg_grpc_interrupt_requested = sig;
+}
 
 void _PG_init(void); void _PG_init(void) {
     grpc_init();
     if (!grpc_is_initialized()) E("!grpc_is_initialized");
+    pg_grpc_interrupt_requested = 0;
+    pgsql_interrupt_handler = pqsignal(SIGINT, pg_grpc_interrupt_handler);
 }
 
 void _PG_fini(void); void _PG_fini(void) {
     void *reserved = NULL;
     grpc_call_error error;
+    pqsignal(SIGINT, pgsql_interrupt_handler);
     if (target) pfree((void *)target);
     grpc_completion_queue_destroy(completion_queue);
     if (call && (error = grpc_call_cancel(call, reserved))) E("!grpc_call_cancel and %s", grpc_call_error_to_string(error));
