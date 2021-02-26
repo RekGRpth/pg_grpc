@@ -44,10 +44,10 @@
 
 PG_MODULE_MAGIC;
 
+static char *target = NULL;
 static grpc_call *call = NULL;
 static grpc_channel *channel = NULL;
 static grpc_completion_queue *completion_queue = NULL;
-static char *target = NULL;
 
 void _PG_init(void); void _PG_init(void) {
     grpc_init();
@@ -58,6 +58,7 @@ void _PG_fini(void); void _PG_fini(void) {
     void* reserved = NULL;
     grpc_call_error error;
     if (target) pfree((void *)target);
+    grpc_completion_queue_destroy(completion_queue);
     if (call && (error = grpc_call_cancel(call, reserved))) E("!grpc_call_cancel and %s", grpc_call_error_to_string(error));
     if (channel) grpc_channel_destroy(channel);
     grpc_shutdown();
@@ -71,6 +72,7 @@ EXTENSION(pg_grpc_insecure_channel_create) {
     target = TextDatumGetCString(PG_GETARG_DATUM(0));
     if (channel) grpc_channel_destroy(channel);
     if (!(channel = grpc_insecure_channel_create(target, args, reserved))) E("!grpc_insecure_channel_create");
+    if (completion_queue) grpc_completion_queue_destroy(completion_queue);
     if (!(completion_queue = grpc_completion_queue_create_for_next(reserved))) E("!grpc_completion_queue_create_for_next");
     PG_RETURN_BOOL(true);
 }
@@ -84,6 +86,7 @@ EXTENSION(pg_grpc_secure_channel_create) {
     target = TextDatumGetCString(PG_GETARG_DATUM(0));
     if (channel) grpc_channel_destroy(channel);
     if (!(channel = grpc_secure_channel_create(creds, target, args, reserved))) E("!grpc_insecure_channel_create");
+    if (completion_queue) grpc_completion_queue_destroy(completion_queue);
     if (!(completion_queue = grpc_completion_queue_create_for_next(reserved))) E("!grpc_completion_queue_create_for_next");
     PG_RETURN_BOOL(true);
 }
@@ -91,7 +94,6 @@ EXTENSION(pg_grpc_secure_channel_create) {
 EXTENSION(pg_grpc_channel_create_call) {
     grpc_call *parent_call = NULL;
     uint32_t propagation_mask = 0;
-    grpc_completion_queue *completion_queue = NULL;
     grpc_slice method;
     grpc_slice host = grpc_slice_from_copied_string(target);
     gpr_timespec deadline;
