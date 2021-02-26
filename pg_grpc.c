@@ -52,6 +52,7 @@ void _PG_init(void); void _PG_init(void) {
 }
 
 void _PG_fini(void); void _PG_fini(void) {
+    if (channel) grpc_channel_destroy(channel);
     grpc_shutdown();
 }
 
