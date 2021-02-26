@@ -128,8 +128,16 @@ EXTENSION(pg_grpc_call_start_batch) {
     void *tag = NULL;
     void *reserved = NULL;
     grpc_metadata_array metadata;
+    uint32_t flags = 0;
+    grpc_byte_buffer *input = NULL;
     grpc_call_error error;
+    const char *cinput;
+    grpc_slice slice;
     if (!call) E("!call");
+    if (PG_ARGISNULL(0)) E("input is null!");
+    cinput = TextDatumGetCString(PG_GETARG_DATUM(0));
+    slice = grpc_slice_from_copied_string(cinput);
+    if (!(input = grpc_raw_byte_buffer_create(&slice, 1))) E("!grpc_raw_byte_buffer_create");
     grpc_metadata_array_init(&metadata);
     memset(&ops, 0, sizeof(ops));
     ops.op = GRPC_OP_SEND_INITIAL_METADATA;
@@ -137,6 +145,13 @@ EXTENSION(pg_grpc_call_start_batch) {
     ops.data.send_initial_metadata.count = metadata.count;
     if ((error = grpc_call_start_batch(call, &ops, nops, tag, reserved))) E("!grpc_call_start_batch and %s", grpc_call_error_to_string(error));
     grpc_metadata_array_destroy(&metadata);
+    memset(&ops, 0, sizeof(ops));
+    ops.op = GRPC_OP_SEND_MESSAGE;
+    ops.flags = flags;
+    ops.data.send_message.send_message = input;
+    if ((error = grpc_call_start_batch(call, &ops, nops, tag, reserved))) E("!grpc_call_start_batch and %s", grpc_call_error_to_string(error));
+    pfree((void *)cinput);
+    grpc_slice_unref(slice);
     PG_RETURN_BOOL(true);
 }
 
