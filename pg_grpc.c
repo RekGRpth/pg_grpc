@@ -95,7 +95,12 @@ EXTENSION(pg_grpc_channel_create_call) {
     gpr_timespec deadline;
     void* reserved = NULL;
     grpc_call_error error;
+    const char *cmethod;
+    if (PG_ARGISNULL(0)) E("method is null!");
+    cmethod = TextDatumGetCString(PG_GETARG_DATUM(0));
+    method = grpc_slice_from_copied_string(cmethod);
     if (call && (error = grpc_call_cancel(call, reserved))) E("!grpc_call_cancel and %s", grpc_call_error_to_string(error));
     if (!(call = grpc_channel_create_call(channel, parent_call, propagation_mask, completion_queue, method, &host, deadline, reserved))) E("!grpc_channel_create_call");
+    pfree((void *)cmethod);
     PG_RETURN_BOOL(true);
 }
