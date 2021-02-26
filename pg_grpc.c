@@ -1,15 +1,12 @@
-#include <grpc/grpc.h>
-#include <grpc/grpc_security.h>
 #include <postgres.h>
 
-//#include <catalog/pg_type.h>
+#include <catalog/pg_type.h>
 #include <fmgr.h>
-//extern text *cstring_to_text(const char *s);
-//extern text *cstring_to_text_with_len(const char *s, int len);
-//extern char *text_to_cstring(const text *t);
-//extern void text_to_cstring_buffer(const text *src, char *dst, size_t dst_len);
-//#define CStringGetTextDatum(s) PointerGetDatum(cstring_to_text(s))
-//#define TextDatumGetCString(d) text_to_cstring((text *) DatumGetPointer(d))
+#include <lib/stringinfo.h>
+#include <utils/builtins.h>
+
+#include <grpc/grpc.h>
+#include <grpc/grpc_security.h>
 
 #define EXTENSION(function) Datum (function)(PG_FUNCTION_ARGS); PG_FUNCTION_INFO_V1(function); Datum (function)(PG_FUNCTION_ARGS)
 
