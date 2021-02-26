@@ -130,6 +130,7 @@ EXTENSION(pg_grpc_call_start_batch) {
     grpc_metadata_array metadata;
     uint32_t flags = 0;
     grpc_byte_buffer *input = NULL;
+    grpc_byte_buffer *output = NULL;
     grpc_call_error error;
     const char *cinput;
     grpc_slice slice;
@@ -149,6 +150,20 @@ EXTENSION(pg_grpc_call_start_batch) {
     ops.op = GRPC_OP_SEND_MESSAGE;
     ops.flags = flags;
     ops.data.send_message.send_message = input;
+    if ((error = grpc_call_start_batch(call, &ops, nops, tag, reserved))) E("!grpc_call_start_batch and %s", grpc_call_error_to_string(error));
+    memset(&ops, 0, sizeof(ops));
+    ops.op = GRPC_OP_SEND_CLOSE_FROM_CLIENT;
+    if ((error = grpc_call_start_batch(call, &ops, nops, tag, reserved))) E("!grpc_call_start_batch and %s", grpc_call_error_to_string(error));
+    memset(&ops, 0, sizeof(ops));
+    ops.op = GRPC_OP_RECV_INITIAL_METADATA;
+    ops.data.recv_initial_metadata.recv_initial_metadata = &metadata;
+    if ((error = grpc_call_start_batch(call, &ops, nops, tag, reserved))) E("!grpc_call_start_batch and %s", grpc_call_error_to_string(error));
+    memset(&ops, 0, sizeof(ops));
+    ops.op = GRPC_OP_RECV_MESSAGE;
+    ops.data.recv_message.recv_message = &output;
+    if ((error = grpc_call_start_batch(call, &ops, nops, tag, reserved))) E("!grpc_call_start_batch and %s", grpc_call_error_to_string(error));
+    memset(&ops, 0, sizeof(ops));
+    ops.op = GRPC_OP_SEND_CLOSE_FROM_CLIENT;
     if ((error = grpc_call_start_batch(call, &ops, nops, tag, reserved))) E("!grpc_call_start_batch and %s", grpc_call_error_to_string(error));
     pfree((void *)cinput);
     grpc_slice_unref(slice);
